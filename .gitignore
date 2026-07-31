@@ -2,3 +2,8 @@ __pycache__/
 *.pyc
 outputs/
 .env
+
+data/
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
