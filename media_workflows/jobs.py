@@ -101,7 +101,12 @@ class JobQueue:
         rendered = json.dumps(result, allow_nan=False) if result is not None else None
         with self.transaction() as db:
             row = db.execute("SELECT * FROM jobs WHERE id=?", (identifier,)).fetchone()
-            if row is None or row["status"] != "running" or row["token"] != token:
+            if (
+                row is None
+                or row["status"] != "running"
+                or row["token"] != token
+                or row["lease_until"] <= self.clock()
+            ):
                 raise StaleClaim("job is no longer owned by this claim")
             status = (
                 "succeeded"

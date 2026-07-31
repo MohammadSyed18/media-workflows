@@ -1,6 +1,7 @@
 import argparse
 import json
 from .jobs import JobQueue
+from .control import QueueControl
 from .pipeline import Pipeline
 from .worker import run_one
 
@@ -16,9 +17,16 @@ def main():
     run = commands.add_parser("run")
     run.add_argument("--output", default="outputs")
     run.add_argument("--worker", default="local")
+    commands.add_parser("health")
+    for command in ("cancel", "retry"):
+        commands.add_parser(command).add_argument("id")
     args = parser.parse_args()
     queue = JobQueue(args.database)
-    if args.command == "add":
+    if args.command == "health":
+        result = QueueControl(queue).health()
+    elif args.command in {"cancel", "retry"}:
+        result = {"status": getattr(QueueControl(queue), args.command)(args.id)}
+    elif args.command == "add":
         result = [queue.add(source) for source in args.sources]
     elif args.command == "list":
         result = queue.list()

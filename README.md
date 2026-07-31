@@ -32,3 +32,15 @@ python -m media_workflows.batch_cli recover
 ```
 
 The run command drains currently ready jobs and exits; it does not wait indefinitely for delayed retries. Run it again after backoff. Recover only expired leases. Actual encoding still requires FFmpeg/FFprobe. Tests use isolated adapters and cover deduplication, worker replacement, retry delays, source changes, and persisted results.
+
+## Queue operations and lease ownership
+
+```sh
+python -m media_workflows.batch_cli health
+python -m media_workflows.batch_cli cancel JOB_ID
+python -m media_workflows.batch_cli retry JOB_ID
+```
+
+`control.py` provides operator cancellation, explicit retry of failed/cancelled jobs, lease renewal, and ready/expired/oldest-job summaries. Cancellation invalidates claim tokens, so a late worker cannot acknowledge the job. It does not kill an encoder process that is already running or delete published files. Successful jobs cannot be cancelled. An explicit retry resets the bounded attempt budget and gives the next worker a fresh token. Input digests are rechecked by the existing worker before encoding.
+
+Workers with long-running adapters can call `QueueControl.renew(job_id, token, lease_seconds=...)` before lease expiry. Renewal and completion both reject expired ownership, even before recovery has reassigned the job. Default local jobs do not spawn a heartbeat thread; an adapter exceeding its lease needs renewal or a longer configured claim. Actual encoder output still requires FFmpeg/FFprobe; queue tests use isolated adapters.
